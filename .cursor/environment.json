@@ -1,0 +1,15 @@
+{
+  "name": "receipt-scanner-web",
+  "install": "bash scripts/setup.sh",
+  "terminals": [
+    {
+      "name": "backend",
+      "command": "cd backend && .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    },
+    {
+      "name": "frontend",
+      "command": "cd frontend && npm run dev"
+    }
+  ],
+  "ports": [3000, 8000]
+}

@@ -76,6 +76,13 @@ def find_document_contour(image: np.ndarray) -> np.ndarray | None:
         if len(approx) == 4 and cv2.contourArea(approx) > 0.1 * small_area:
             return (approx.reshape(4, 2).astype("float32")) * ratio
 
+    # Fallback for real photos where edges are soft/curled and no clean 4-gon is
+    # found: use the rotated bounding box of the largest sizable contour.
+    for contour in contours:
+        if cv2.contourArea(contour) > 0.2 * small_area:
+            box = cv2.boxPoints(cv2.minAreaRect(contour))
+            return box.astype("float32") * ratio
+
     return None
 
 

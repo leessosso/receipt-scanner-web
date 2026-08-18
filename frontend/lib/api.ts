@@ -15,6 +15,7 @@ export interface ReceiptOcr {
   subtotal: number | null
   tax: number | null
   total: number | null
+  currency: string | null
   items: ReceiptLineItem[]
 }
 

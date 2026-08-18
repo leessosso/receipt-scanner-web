@@ -23,6 +23,16 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
+def _kr_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    for path in (
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    ):
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return _font(size)
+
+
 def render_receipt() -> np.ndarray:
     w, h = 520, 760
     margin = 44
@@ -73,6 +83,57 @@ def render_receipt() -> np.ndarray:
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 
+def render_korean_receipt() -> np.ndarray:
+    w, h = 560, 780
+    margin = 40
+    img = Image.new("RGB", (w, h), "white")
+    draw = ImageDraw.Draw(img)
+
+    title = _kr_font(30)
+    body = _kr_font(22)
+
+    def text_width(text: str, font) -> int:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        return bbox[2] - bbox[0]
+
+    def center(text: str, font, y: int) -> None:
+        draw.text(((w - text_width(text, font)) // 2, y), text, fill="black", font=font)
+
+    def left(text: str, font, y: int) -> None:
+        draw.text((margin, y), text, fill="black", font=font)
+
+    def row(label: str, amount: str, font, y: int) -> None:
+        draw.text((margin, y), label, fill="black", font=font)
+        draw.text((w - margin - text_width(amount, font), y), amount, fill="black", font=font)
+
+    divider = "-" * 28
+    y = 34
+    center("수확농축마트", title, y); y += 46
+    center("서울 양천구 목동중앙북로 27", body, y); y += 32
+    left("사업자 792-30-00222", body, y); y += 30
+    left("전화 02-2649-0144", body, y); y += 34
+    left(divider, body, y); y += 30
+    left("거래일시 26-08-12 20:33", body, y); y += 40
+
+    left("상품명        단가  수량   금액", body, y); y += 34
+    for name, price, qty, amount in [
+        ("미니제주감귤", "3,500", "1", "3,500"),
+        ("롯데 웹시블럭", "2,800", "1", "2,800"),
+    ]:
+        row(name, amount, body, y); y += 34
+
+    y += 6
+    left(divider, body, y); y += 32
+    row("과세물품", "5,728", body, y); y += 32
+    row("부가세", "572", body, y); y += 40
+    row("합계금액", "6,300", title, y); y += 50
+    row("카드결제", "6,300", body, y); y += 34
+    left(divider, body, y); y += 34
+    center("교환/환불시 영수증 필요", body, y)
+
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+
 def warp_onto_background(receipt: np.ndarray) -> np.ndarray:
     h, w = receipt.shape[:2]
     canvas_w, canvas_h = 900, 1100
@@ -110,7 +171,16 @@ def main() -> None:
         skewed,
         [int(cv2.IMWRITE_JPEG_QUALITY), 90],
     )
-    print("Wrote samples/flat_receipt.png and samples/skewed_receipt.jpg")
+
+    kr_receipt = render_korean_receipt()
+    cv2.imwrite(os.path.join(out_dir, "flat_receipt_kor.png"), kr_receipt)
+    kr_skewed = warp_onto_background(kr_receipt)
+    cv2.imwrite(
+        os.path.join(out_dir, "skewed_receipt_kor.jpg"),
+        kr_skewed,
+        [int(cv2.IMWRITE_JPEG_QUALITY), 90],
+    )
+    print("Wrote English and Korean samples to samples/")
 
 
 if __name__ == "__main__":

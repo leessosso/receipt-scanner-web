@@ -61,7 +61,10 @@ async def transform(
         False,
         description="Run OCR on the corrected image (requires response_format=json).",
     ),
-    lang: str = Query("eng", description="Tesseract language code for OCR."),
+    lang: str = Query(
+        "kor+eng",
+        description="Tesseract language code(s) for OCR, e.g. `eng` or `kor+eng`.",
+    ),
 ) -> Response:
     """Correct the perspective of a receipt photo.
 

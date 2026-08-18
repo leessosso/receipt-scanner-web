@@ -11,6 +11,8 @@ cd "$ROOT_DIR"
 missing_pkgs=()
 dpkg -s python3.12-venv >/dev/null 2>&1 || missing_pkgs+=(python3.12-venv)
 dpkg -s tesseract-ocr >/dev/null 2>&1 || missing_pkgs+=(tesseract-ocr)
+dpkg -s tesseract-ocr-kor >/dev/null 2>&1 || missing_pkgs+=(tesseract-ocr-kor)
+dpkg -s fonts-noto-cjk >/dev/null 2>&1 || missing_pkgs+=(fonts-noto-cjk)
 if [ "${#missing_pkgs[@]}" -gt 0 ]; then
   echo "Installing system packages: ${missing_pkgs[*]}"
   sudo apt-get update -qq

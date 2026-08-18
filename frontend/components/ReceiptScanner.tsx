@@ -309,19 +309,19 @@ export default function ReceiptScanner() {
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">합계</p>
               <p className="font-semibold text-brand-700">
-                {formatCurrency(ocr.total)}
+                {formatCurrency(ocr.total, ocr.currency)}
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">소계</p>
               <p className="font-medium text-slate-800">
-                {formatCurrency(ocr.subtotal)}
+                {formatCurrency(ocr.subtotal, ocr.currency)}
               </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">세금</p>
               <p className="font-medium text-slate-800">
-                {formatCurrency(ocr.tax)}
+                {formatCurrency(ocr.tax, ocr.currency)}
               </p>
             </div>
           </div>
@@ -342,7 +342,7 @@ export default function ReceiptScanner() {
                   >
                     <td className="px-4 py-2 text-slate-700">{item.description}</td>
                     <td className="px-4 py-2 text-right font-medium text-slate-800">
-                      {formatCurrency(item.amount)}
+                      {formatCurrency(item.amount, ocr.currency)}
                     </td>
                   </tr>
                 ))}

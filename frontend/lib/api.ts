@@ -36,7 +36,7 @@ interface TransformJsonResponse {
   ocr?: ReceiptOcr
 }
 
-function base64ToBlob(base64: string, contentType: string): Blob {
+export function base64ToBlob(base64: string, contentType: string): Blob {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i += 1) {

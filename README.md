@@ -19,13 +19,17 @@
   Grayscale → Gaussian Blur → Canny → Contour 탐색 → `approxPolyDP` 로 4각형 검출 →
   `getPerspectiveTransform`/`warpPerspective` 로 평면화 → 대비/샤프닝 보정을 수행합니다.
   4각형 검출에 실패하면 대비 보정만 적용한 원본을 반환합니다(fallback).
+  `?response_format=json&ocr=true` 를 붙이면 보정 이미지와 함께 **Tesseract OCR** 로
+  추출한 텍스트 및 구조화 필드(가맹점/날짜/소계/세금/합계/항목)를 반환합니다.
 - **Frontend**: 카메라 촬영/갤러리 업로드, 미리보기, 보정 요청(로딩 스피너),
-  원본 vs 보정 비교 뷰, 90도 회전 및 JPEG 다운로드 기능을 제공합니다.
+  원본 vs 보정 비교 뷰, 90도 회전 및 JPEG 다운로드, OCR 토글 및 추출 결과 표시
+  기능을 제공합니다.
 
 ## 사전 요구사항
 
 - Python 3.10+ (개발/검증은 3.12 기준, `python3-venv` 필요)
 - Node.js 18+ (검증은 v22 기준)
+- Tesseract OCR 엔진 (`tesseract-ocr`, OCR 기능 사용 시)
 
 ## 로컬 실행 방법
 
@@ -69,7 +73,21 @@ curl -F "file=@samples/skewed_receipt.jpg" \
 ```
 
 `response_format=json` 쿼리를 붙이면 Base64 이미지와 검출 메타데이터가 담긴 JSON을
-받을 수 있습니다.
+받을 수 있고, 여기에 `&ocr=true` 를 더하면 추출 텍스트와 구조화 필드가 포함됩니다.
+
+## 테스트
+
+```bash
+# 백엔드 (pytest: 변환 파이프라인 / OCR 파싱 / API 엔드포인트)
+cd backend
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+
+# 프론트엔드 (vitest: 순수 유틸)
+cd frontend
+npm test
+```
 
 ## Cloud Agent 환경
 
@@ -77,8 +95,14 @@ curl -F "file=@samples/skewed_receipt.jpg" \
 (`backend`, `frontend`)을 정의합니다. 새 Cloud Agent가 시작되면 백엔드(8000)와
 프론트엔드(3000)가 자동으로 기동됩니다.
 
-## OCR 확장 지점
+## OCR 구조 및 확장
 
-`backend/app/image_processing.py` 의 `transform_receipt()` 는 평면화된
-`np.ndarray` 를 돌려줍니다. 이 결과에 Tesseract 등 OCR 단계를 연결하고,
-`main.py` 의 JSON 응답에 추출 텍스트 필드를 추가하면 됩니다.
+OCR 단계는 검출/보정 코어와 분리되어 있습니다.
+
+- `backend/app/image_processing.py` 의 `transform_receipt()` 가 평면화된
+  `np.ndarray` 를 반환합니다.
+- `backend/app/ocr.py` 의 `extract_receipt()` 가 이 이미지를 이진화한 뒤
+  Tesseract 로 텍스트를 읽고, `parse_receipt()` 가 필드로 파싱합니다.
+
+확장 예: 다국어 인식은 `lang` 파라미터로 언어 코드를 넘기고 해당 `tesseract-ocr-<lang>`
+패키지를 설치하면 되고, 파싱 규칙은 `parse_receipt()` 의 정규식/휴리스틱을 조정합니다.

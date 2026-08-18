@@ -14,16 +14,9 @@ import {
   Wand2,
 } from 'lucide-react'
 import { transformReceipt, type ReceiptOcr } from '@/lib/api'
+import { formatCurrency } from '@/lib/format'
 
 type Phase = 'idle' | 'ready' | 'processing' | 'done' | 'error'
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '—'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value)
-}
 
 export default function ReceiptScanner() {
   const [phase, setPhase] = useState<Phase>('idle')

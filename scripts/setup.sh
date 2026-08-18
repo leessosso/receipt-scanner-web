@@ -24,7 +24,8 @@ if [ ! -x .venv/bin/python ]; then
   python3 -m venv .venv
 fi
 .venv/bin/pip install --upgrade pip -q
-.venv/bin/pip install -r requirements.txt
+# requirements-dev.txt includes requirements.txt plus test tooling (pytest, httpx).
+.venv/bin/pip install -r requirements-dev.txt
 
 # --- Frontend ---
 echo "Setting up frontend..."

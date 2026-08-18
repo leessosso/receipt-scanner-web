@@ -1,0 +1,8 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated sample/test images (reproducible via scripts/make_sample.py)
+samples/

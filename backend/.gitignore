@@ -4,5 +4,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local secrets
+.env
+*-service-account.json
+
 # Generated sample/test images (reproducible via scripts/make_sample.py)
 samples/

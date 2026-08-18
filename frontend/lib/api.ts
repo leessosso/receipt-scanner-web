@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8001'
 
 export interface ReceiptLineItem {
   description: string
@@ -53,6 +53,35 @@ export function base64ToBlob(base64: string, contentType: string): Blob {
  * detection metadata is read from response headers. When ``ocr`` is true the
  * JSON envelope is used so extracted text/fields come back alongside the image.
  */
+export interface SaveReceiptInput {
+  file: File
+  date: string
+  amount: string
+  memo: string
+}
+
+export interface SaveReceiptResult {
+  file_id: string
+  file_url: string
+  spreadsheet_id: string
+}
+
+export async function saveReceipt(
+  input: SaveReceiptInput,
+): Promise<SaveReceiptResult> {
+  const formData = new FormData()
+  formData.append('file', input.file)
+  formData.append('date', input.date)
+  formData.append('amount', input.amount)
+  formData.append('memo', input.memo)
+
+  const response = await axios.post<SaveReceiptResult>(
+    `${API_BASE_URL}/api/receipts`,
+    formData,
+  )
+  return response.data
+}
+
 export async function transformReceipt(
   file: File,
   options: { ocr?: boolean } = {},

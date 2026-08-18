@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 from .image_processing import encode_jpeg, transform_receipt
+from .ocr import extract_receipt
 
 app = FastAPI(
     title="Receipt Scanner API",
@@ -56,17 +57,28 @@ async def transform(
         pattern="^(image|json)$",
         description="`image` returns JPEG bytes, `json` returns Base64 payload.",
     ),
+    ocr: bool = Query(
+        False,
+        description="Run OCR on the corrected image (requires response_format=json).",
+    ),
+    lang: str = Query("eng", description="Tesseract language code for OCR."),
 ) -> Response:
     """Correct the perspective of a receipt photo.
 
     Returns the flattened JPEG directly (``response_format=image``) or a JSON
     envelope with a Base64 image plus detection metadata
-    (``response_format=json``).
+    (``response_format=json``). When ``ocr=true`` (JSON only), the envelope also
+    includes extracted text and best-effort structured fields.
     """
     if file.content_type and not file.content_type.startswith("image/"):
         raise HTTPException(
             status_code=415,
             detail=f"Unsupported content type: {file.content_type}",
+        )
+    if ocr and response_format != "json":
+        raise HTTPException(
+            status_code=400,
+            detail="OCR results require response_format=json.",
         )
 
     data = await file.read()
@@ -83,14 +95,15 @@ async def transform(
     jpeg_bytes = encode_jpeg(result.image)
 
     if response_format == "json":
-        return JSONResponse(
-            {
-                "detected": result.detected,
-                "message": result.message,
-                "content_type": "image/jpeg",
-                "image_base64": base64.b64encode(jpeg_bytes).decode("ascii"),
-            }
-        )
+        payload = {
+            "detected": result.detected,
+            "message": result.message,
+            "content_type": "image/jpeg",
+            "image_base64": base64.b64encode(jpeg_bytes).decode("ascii"),
+        }
+        if ocr:
+            payload["ocr"] = extract_receipt(result.image, lang=lang).to_dict()
+        return JSONResponse(payload)
 
     return Response(
         content=jpeg_bytes,

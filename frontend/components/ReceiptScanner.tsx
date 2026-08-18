@@ -8,13 +8,22 @@ import {
   Download,
   ImageUp,
   Loader2,
+  Receipt,
   RotateCw,
   ScanLine,
   Wand2,
 } from 'lucide-react'
-import { transformReceipt } from '@/lib/api'
+import { transformReceipt, type ReceiptOcr } from '@/lib/api'
 
 type Phase = 'idle' | 'ready' | 'processing' | 'done' | 'error'
+
+function formatCurrency(value: number | null): string {
+  if (value === null || value === undefined) return '—'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value)
+}
 
 export default function ReceiptScanner() {
   const [phase, setPhase] = useState<Phase>('idle')
@@ -24,6 +33,8 @@ export default function ReceiptScanner() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [rotation, setRotation] = useState(0)
+  const [ocrEnabled, setOcrEnabled] = useState(false)
+  const [ocr, setOcr] = useState<ReceiptOcr | null>(null)
 
   const selectedFile = useRef<File | null>(null)
   const galleryInput = useRef<HTMLInputElement>(null)
@@ -49,6 +60,7 @@ export default function ReceiptScanner() {
     setDetected(null)
     setMessage('')
     setRotation(0)
+    setOcr(null)
   }, [])
 
   const handleFile = useCallback(
@@ -70,13 +82,16 @@ export default function ReceiptScanner() {
     setPhase('processing')
     setError('')
     try {
-      const result = await transformReceipt(selectedFile.current)
+      const result = await transformReceipt(selectedFile.current, {
+        ocr: ocrEnabled,
+      })
       setResultUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev)
         return result.imageUrl
       })
       setDetected(result.detected)
       setMessage(result.message)
+      setOcr(result.ocr ?? null)
       setRotation(0)
       setPhase('done')
     } catch (err) {
@@ -87,7 +102,7 @@ export default function ReceiptScanner() {
       setError(detail)
       setPhase('error')
     }
-  }, [])
+  }, [ocrEnabled])
 
   const handleDownload = useCallback(async () => {
     if (!resultUrl) return
@@ -149,6 +164,20 @@ export default function ReceiptScanner() {
           갤러리 업로드
         </button>
       </div>
+
+      <label className="mt-3 flex cursor-pointer items-center justify-between rounded-xl bg-white px-4 py-3 text-sm shadow-sm ring-1 ring-slate-200">
+        <span className="flex items-center gap-2 font-medium text-slate-700">
+          <Receipt className="h-5 w-5 text-brand-600" />
+          텍스트도 추출 (OCR)
+        </span>
+        <input
+          type="checkbox"
+          checked={ocrEnabled}
+          onChange={(e) => setOcrEnabled(e.target.checked)}
+          disabled={busy}
+          className="h-5 w-5 accent-brand-600"
+        />
+      </label>
 
       <input
         ref={cameraInput}
@@ -266,6 +295,76 @@ export default function ReceiptScanner() {
         <div className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-200">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {ocr && !busy && (
+        <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
+            <Receipt className="h-5 w-5 text-brand-600" />
+            추출된 텍스트
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-4 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">가맹점</p>
+              <p className="font-medium text-slate-800">{ocr.merchant ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">날짜</p>
+              <p className="font-medium text-slate-800">{ocr.date ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">합계</p>
+              <p className="font-semibold text-brand-700">
+                {formatCurrency(ocr.total)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">소계</p>
+              <p className="font-medium text-slate-800">
+                {formatCurrency(ocr.subtotal)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">세금</p>
+              <p className="font-medium text-slate-800">
+                {formatCurrency(ocr.tax)}
+              </p>
+            </div>
+          </div>
+
+          {ocr.items.length > 0 && (
+            <table className="w-full border-t border-slate-100 text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-2 font-medium">항목</th>
+                  <th className="px-4 py-2 text-right font-medium">금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ocr.items.map((item, index) => (
+                  <tr
+                    key={`${item.description}-${index}`}
+                    className="border-t border-slate-50"
+                  >
+                    <td className="px-4 py-2 text-slate-700">{item.description}</td>
+                    <td className="px-4 py-2 text-right font-medium text-slate-800">
+                      {formatCurrency(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <details className="border-t border-slate-100 px-4 py-3 text-sm">
+            <summary className="cursor-pointer font-medium text-slate-600">
+              원본 OCR 텍스트
+            </summary>
+            <pre className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+              {ocr.raw_text.trim() || '(추출된 텍스트가 없습니다)'}
+            </pre>
+          </details>
         </div>
       )}
 

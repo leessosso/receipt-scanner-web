@@ -6,11 +6,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# --- System deps: Python venv support (missing from some base images) ---
-if ! dpkg -s python3.12-venv >/dev/null 2>&1; then
-  echo "Installing python3.12-venv..."
+# --- System deps: Python venv support + Tesseract OCR engine ---
+# (both may be missing from the base image; install is idempotent)
+missing_pkgs=()
+dpkg -s python3.12-venv >/dev/null 2>&1 || missing_pkgs+=(python3.12-venv)
+dpkg -s tesseract-ocr >/dev/null 2>&1 || missing_pkgs+=(tesseract-ocr)
+if [ "${#missing_pkgs[@]}" -gt 0 ]; then
+  echo "Installing system packages: ${missing_pkgs[*]}"
   sudo apt-get update -qq
-  sudo apt-get install -y -qq python3.12-venv
+  sudo apt-get install -y -qq "${missing_pkgs[@]}"
 fi
 
 # --- Backend ---

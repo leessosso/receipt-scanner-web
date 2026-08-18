@@ -35,6 +35,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Custom response headers must be explicitly exposed or cross-origin
+    # browser JS cannot read them (curl is unaffected).
+    expose_headers=["X-Receipt-Detected", "X-Receipt-Message"],
 )
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB
